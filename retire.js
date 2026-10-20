@@ -323,6 +323,22 @@ function submitToSheet(p, g) {
     .catch((err) => console.error("Failed to submit to Google Sheets:", err));
 }
 
+// Year-by-year table, split in two: working years, then retirement years.
+// When printed, the first table starts page 2 and the retirement years start a new page.
+function balanceTables(e, t) {
+  const head = `<thead><tr><th>Age</th><th class="num">Beginning retirement balance</th><th class="num">Investment growth</th><th class="num">Contributions at ${e.percentToSave}% of income</th><th class="num">Annual income desired</th><th class="num">Retirement account withdrawals</th><th class="num">Ending retirement balance</th></tr></thead>`;
+  const rowHTML = (r) => `<tr class="${r.age >= e.retirementAge ? "retire-year" : ""}">
+          <td>${r.age}</td><td class="num">${money(r.beginningBalance)}</td><td class="num">${money(r.investmentGrowth)}</td><td class="num">${money(r.contributions)}</td>
+          <td class="num">${money(r.annualIncomeDesired)}</td><td class="num">${money(r.withdrawals)}</td><td class="num">${money(r.endingBalance)}</td></tr>`;
+  const table = (rows) => `<div class="table-scroll"><table>${head}<tbody>${rows.map(rowHTML).join("")}</tbody></table></div>`;
+  const working = t.yearlyData.filter((r) => r.age < e.retirementAge);
+  const retired = t.yearlyData.filter((r) => r.age >= e.retirementAge);
+  const parts = [];
+  if (working.length) parts.push(`<section class="balances"><h4>Balances by year*: before retirement</h4>${table(working)}</section>`);
+  if (retired.length) parts.push(`<section class="balances"><h4>Balances by year*: retirement, from age ${e.retirementAge}</h4>${table(retired)}</section>`);
+  return parts.join("");
+}
+
 function renderReport() {
   const e = state.inputs, t = state.results;
   const goalAge = e.retirementAge + e.yearsOfRetirementIncome;
@@ -387,15 +403,7 @@ function renderReport() {
           <ul class="rp-legend">${PIE.map(([label, k, color]) => `<li><span class="sw" style="background:${color}"></span>${label}<span class="v">${money(t[k])}</span></li>`).join("")}</ul></div>` : ""}
       </div>
     </div>
-    <h4>Balances by year*</h4>
-    <div class="table-scroll">
-      <table>
-        <thead><tr><th>Age</th><th class="num">Beginning retirement balance</th><th class="num">Investment growth</th><th class="num">Contributions at ${e.percentToSave}% of income</th><th class="num">Annual income desired</th><th class="num">Retirement account withdrawals</th><th class="num">Ending retirement balance</th></tr></thead>
-        <tbody>${t.yearlyData.map((r) => `<tr class="${r.age >= e.retirementAge ? "retire-year" : ""}">
-          <td>${r.age}</td><td class="num">${money(r.beginningBalance)}</td><td class="num">${money(r.investmentGrowth)}</td><td class="num">${money(r.contributions)}</td>
-          <td class="num">${money(r.annualIncomeDesired)}</td><td class="num">${money(r.withdrawals)}</td><td class="num">${money(r.endingBalance)}</td></tr>`).join("")}</tbody>
-      </table>
-    </div>
+    ${balanceTables(e, t)}
     <p class="table-note">* This chart reflects fixed annual rates of return, expense, and income growth. It is meant solely as a guide. It is not likely that these and other variables will increase and decrease by a steady annual rate year over year.</p>
     <div class="report-foot">
       <b>Questions about your retirement plan?</b> Contact Bill Ippolito.<br>${contact}

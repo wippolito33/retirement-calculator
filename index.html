@@ -171,7 +171,6 @@
   .report-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 28px; }
   .report .table-scroll th { white-space: normal; vertical-align: bottom; padding: 10px 10px; }
   .report .table-scroll td { padding: 8px 10px; white-space: nowrap; }
-  @media print { .report .table-scroll { overflow: visible; } .report .table-scroll table { min-width: 0; font-size: 0.75rem; } }
   table.info { width: 100%; min-width: 0; border-collapse: collapse; font-size: 0.9375rem; }
   table.info td { padding: 7px 0; border-bottom: 1px solid var(--rule); vertical-align: top; }
   table.info td:last-child { text-align: right; padding-left: 12px; }
@@ -182,7 +181,44 @@
   .report a, .letterhead a { color: var(--ink); }
   @media (max-width: 900px) { .calc { grid-template-columns: minmax(0, 1fr); } .results { position: static; } }
   @media (max-width: 560px) { .group, .report-grid, .stats { grid-template-columns: minmax(0, 1fr); } .rp-pie { grid-template-columns: minmax(0, 1fr); } }
-  @media print { header.top, nav.pages, .intro, .banner, .calc, .rp-chart, .report-toggle, footer { display: none !important; } .report { border: 0; padding: 0; } }
+  /* Printed report: page 1 holds everything through the result summary,
+     the working-years table starts page 2, and the retirement years start a new page. */
+  @page { size: letter; margin: 0.45in 0.5in; }
+  @media print {
+    header.top, nav.pages, .intro, .banner, .calc, .rp-chart, .report-toggle, footer { display: none !important; }
+    html, body { background: #fff; }
+    * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .wrap { max-width: none; padding: 0; }
+    .report { border: 0; border-radius: 0; padding: 0; margin: 0; font-size: 10.5pt; }
+    .letterhead { padding-bottom: 8px; margin-bottom: 8px; }
+    .letterhead .co { font-size: 18pt; }
+    .letterhead .by, .letterhead .right { font-size: 9pt; line-height: 1.35; margin-top: 4px; }
+    .letterhead .by b { font-size: 10pt; }
+    .report h3 { font-size: 15pt; margin: 6px 0 4px; }
+    .report h4 { font-size: 10.5pt; margin: 10px 0 4px; }
+    .prepared { margin: 0 0 4px; font-size: 10pt; }
+    .summary-box { padding: 6px 10px; margin: 6px 0; font-size: 10pt; }
+    .report ul { margin: 4px 0; padding-left: 18px; font-size: 10pt; }
+    .report li { margin: 1px 0; }
+    .report-grid { gap: 0 24px; }
+    table.info { font-size: 9.5pt; }
+    table.info td { padding: 2.5px 0; }
+    table.info td:first-child { width: 48%; }
+    .rp-pie { grid-template-columns: 110px minmax(0, 1fr); gap: 12px; margin: 8px 0 0 !important; }
+    .rp-pie .pie-box { height: 110px; }
+    .rp-legend { font-size: 9pt; }
+    .rp-legend li { padding: 2px 0; }
+    .balances { break-before: page; }
+    .balances h4 { margin-top: 0; }
+    .report .table-scroll { overflow: visible; border: 0; border-radius: 0; }
+    .report .table-scroll table { min-width: 0; font-size: 8.5pt; }
+    .report .table-scroll th { padding: 3px 6px; }
+    .report .table-scroll td { padding: 1.5px 6px; }
+    .report tr { break-inside: avoid; }
+    .table-note { font-size: 8pt; }
+    .report-foot { margin-top: 12px; padding-top: 8px; font-size: 9pt; break-inside: avoid; }
+    .report-foot p { margin: 4px 0; }
+  }
   footer { border-top: 1px solid var(--rule); padding: 20px 0 40px; font-size: 0.8125rem; color: var(--slate); }
   footer p { max-width: 90ch; margin: 0 0 8px; }
   footer { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 32px; align-items: end; }
