@@ -93,6 +93,7 @@ function buildForm() {
       input.addEventListener("change", () => setInput(f.key, input.checked));
     } else if (["text", "email", "tel"].includes(f.type)) {
       input.value = state.inputs.userInfo[f.key];
+      if (f.type === "tel") input.addEventListener("input", (ev) => formatPhoneBox(input, ev));
       input.addEventListener("input", () => { state.inputs.userInfo[f.key] = input.value; validateField(f, false); });
       input.addEventListener("blur", () => { input.dataset.touched = "1"; validateField(f, false); });
     } else {
@@ -128,6 +129,31 @@ function buildForm() {
     b.addEventListener("mouseleave", () => show(false));
     b.addEventListener("click", () => show(box.hidden));
   });
+}
+
+// Phone box: shows (732) 555-1234 as digits are typed. Numbers starting
+// with + or 1, or longer than 10 digits, are left exactly as typed.
+let lastPhoneDigits = "";
+function formatPhoneBox(input, ev) {
+  const raw = input.value;
+  let digits = raw.replace(/\D/g, "");
+  if (/^\s*\+/.test(raw) || digits[0] === "1" || digits.length > 10) { lastPhoneDigits = digits; return; }
+  const caret = input.selectionStart ?? raw.length;
+  let before = raw.slice(0, caret).replace(/\D/g, "").length;
+  // Backspace over ")", " " or "-" removes the digit in front of it.
+  if (ev && ev.inputType === "deleteContentBackward" && digits === lastPhoneDigits && before > 0) {
+    digits = digits.slice(0, before - 1) + digits.slice(before);
+    before -= 1;
+  }
+  const a = digits.slice(0, 3), b = digits.slice(3, 6), c = digits.slice(6);
+  input.value = !digits ? "" : digits.length <= 3 ? `(${a}` : digits.length <= 6 ? `(${a}) ${b}` : `(${a}) ${b}-${c}`;
+  lastPhoneDigits = digits;
+  if (document.activeElement === input) {
+    let pos = 0, seen = 0;
+    while (pos < input.value.length && seen < before) { if (/\d/.test(input.value[pos])) seen++; pos++; }
+    if (before === 0) pos = digits ? 1 : 0;
+    input.setSelectionRange(pos, pos);
+  }
 }
 
 function validateField(f, force) {
