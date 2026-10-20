@@ -6,8 +6,9 @@ A one-page retirement calculator for Bill Ippolito, Financial Advisor, Alexander
 - `retire-calc.js`: the calculations, ported unchanged from Jake Ippolito's calculator
 - `retire.js`: inputs, results, chart and report
 - `bill-ippolito.jpg`: contact photo
+- `apps-script/Code.gs`: the Google Sheet script (records leads, emails the PDF report)
 
-"View report" requires a name and email and records the request (contact details, inputs and results) in Bill's Google Sheet through the Apps Script web app URL (`SHEET_URL`) in `retire.js`.
+"View report" requires a name and email and sends the request to the Apps Script web app at `SHEET_URL` in `retire.js`. That script (`apps-script/Code.gs`, pasted into the Google Sheet's Apps Script editor) adds a row to the sheet, recalculates the results, and emails the client a PDF of the report from Bill's work address (set up in Gmail under "Send mail as"), with a bcc to Bill. It caps email at 40 reports a day and 3 per client address every 6 hours.
 
 Static site, no build step. Netlify publishes the repo root (see `netlify.toml`) and redeploys on every push to `main`.
 

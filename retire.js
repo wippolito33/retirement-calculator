@@ -300,7 +300,7 @@ function toggleReport() {
   state.reportShown = true;
   $("reportBtn").textContent = "Hide report";
   $("printBtn").hidden = false;
-  $("reportNote").textContent = "";
+  $("reportNote").textContent = `A PDF copy of this report is on its way to ${state.inputs.userInfo.email}.`;
   renderReport();
   $("report").hidden = false;
   $("report").scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
@@ -317,8 +317,14 @@ function submitToSheet(p, g) {
     returnDuringRetirement: p.returnDuringRetirement, expectedInflation: p.expectedInflation, isMarried: p.isMarried,
     includeSocialSecurity: p.includeSocialSecurity, retirementBalance: g.retirementBalance, lastYearIncome: g.lastYearIncome,
     annualRetirementExpenses: g.annualRetirementExpenses, annualSocialSecurity: g.annualSocialSecurity,
-    savingsRunOutAge: g.savingsRunOutAge, endingBalance: g.endingBalance,
+    savingsRunOutAge: g.savingsRunOutAge, endingBalance: g.endingBalance, site: location.hostname,
   };
+  // The sheet's script records the request and emails the PDF report to the
+  // client (copy to Bill). Re-opening the same report doesn't send it again.
+  const { timestamp, ...same } = payload;
+  const key = JSON.stringify(same);
+  if (key === state.lastSent) return;
+  state.lastSent = key;
   fetch(SHEET_URL, { method: "POST", mode: "no-cors", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) })
     .catch((err) => console.error("Failed to submit to Google Sheets:", err));
 }
