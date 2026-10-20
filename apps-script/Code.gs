@@ -192,10 +192,21 @@ function reportHtml(e, t, phoneText) {
     "<li>Increase your rate of return before retirement to <b>" + pct2(t.recommendedReturnRate) + "</b>.</li>" +
     "<li>Reduce your required income in retirement to <b>" + pct2(t.recommendedIncomePercent) + "</b> of your final year's income.</li>" +
     "<li>Delay your retirement until age <b>" + t.recommendedRetirementAge + "</b>.</li></ul>";
-  const breakdown = [
+  const slices = [
     ["Retirement balance", t.retirementBalance, "#2a78d6"], ["Final year income", t.lastYearIncome, "#eb6834"],
     ["Annual expenses", t.annualRetirementExpenses, "#1baf7a"], ["Social Security", t.annualSocialSecurity, "#eda100"],
-  ].map((b) => '<tr><td><span class="sw" style="background:' + b[2] + '"></span>' + b[0] + '</td><td class="r">' + money(b[1]) + "</td></tr>").join("");
+  ];
+  const legend = '<table class="info">' + slices.map((b) => '<tr><td><span style="color:' + b[2] + ';font-size:12pt">&#9632;</span> ' + b[0] +
+    '</td><td class="r">' + money(b[1]) + "</td></tr>").join("") + "</table>";
+  let pieImg = "";
+  try {
+    pieImg = '<img src="data:image/png;base64,' + Utilities.base64Encode(piePng(slices.map((b) => [b[1], b[2]]), 300)) + '" width="130" height="130">';
+  } catch (err) {
+    pieImg = ""; // if the image can't be made, the report still goes out with the legend
+  }
+  const breakdown = pieImg
+    ? '<table style="width:100%;margin-top:10px"><tr><td style="width:140px;vertical-align:middle">' + pieImg + '</td><td style="vertical-align:middle">' + legend + "</td></tr></table>"
+    : '<div style="margin-top:10px">' + legend + "</div>";
 
   const head = "<thead><tr><th>Age</th><th class=\"r\">Beginning retirement balance</th><th class=\"r\">Investment growth</th><th class=\"r\">Contributions at " +
     e.percentToSave + "% of income</th><th class=\"r\">Annual income desired</th><th class=\"r\">Retirement account withdrawals</th><th class=\"r\">Ending retirement balance</th></tr></thead>";
@@ -240,7 +251,7 @@ function reportHtml(e, t, phoneText) {
     row("Are you married?", e.isMarried ? "yes" : "no") + row("Include Social Security?", e.includeSocialSecurity ? "yes" : "no") + "</table>" +
     '<h4>Result summary</h4><table class="info">' + row("Years until retirement", e.retirementAge - e.currentAge) + row("Your last year's income", money(t.lastYearIncome)) +
     row("Estimated annual retirement expenditures", money(t.annualRetirementExpenses)) + row("Your ending balance", money(t.endingBalance)) + "</table>" +
-    '<h4>Breakdown</h4><table class="info">' + breakdown + "</table>" +
+    breakdown +
     "</td></tr></table>" +
     (working.length ? yearTable("Balances by year*: before retirement", working) : "") +
     (retired.length ? yearTable("Balances by year*: retirement, from age " + e.retirementAge, retired) : "") +
@@ -249,6 +260,95 @@ function reportHtml(e, t, phoneText) {
     "<p>Schedule a consultation to discuss your personalized retirement strategy and explore opportunities to optimize your financial future.</p>" +
     '<b style="color:#102A43">Alexander Capital L.P.</b> Building Your Financial Future<p>' + DISCLAIMER + "</p></div>" +
     "</body></html>";
+}
+
+// ------------------------------------------------------------------ pie chart image
+
+// Draws the results pie (same colors and order as the website: clockwise from
+// 12 o'clock, thin white lines between slices) and returns PNG bytes.
+function piePng(slices, size) {
+  const total = slices.reduce((a, s) => a + Math.max(0, s[0]), 0);
+  if (!(total > 0)) throw new Error("nothing to chart");
+  const rgb = (hex) => [parseInt(hex.slice(1, 3), 16), parseInt(hex.slice(3, 5), 16), parseInt(hex.slice(5, 7), 16)];
+  const ends = []; // cumulative end angle (radians from 12 o'clock, clockwise) and color
+  let acc = 0;
+  slices.forEach((s) => { if (s[0] > 0) { acc += s[0] / total * 2 * Math.PI; ends.push([acc, rgb(s[1])]); } });
+  const multi = ends.length > 1;
+  const c = size / 2, r = size / 2 - 2, gap = size / 150; // white line half-width in pixels
+  const bounds = multi ? ends.map((e, k) => (k === ends.length - 1 ? 0 : e[0])) : [];
+  const WHITE = [255, 255, 255];
+  // Color at one point: white outside the circle or on a slice boundary.
+  const colorAt = (px, py) => {
+    const dx = px - c, dy = py - c, d = Math.sqrt(dx * dx + dy * dy);
+    if (d > r) return WHITE;
+    let a = Math.atan2(dx, -dy); if (a < 0) a += 2 * Math.PI;
+    for (let k = 0; k < bounds.length; k++) {
+      let diff = Math.abs(a - bounds[k]); if (diff > Math.PI) diff = 2 * Math.PI - diff;
+      if (diff < Math.PI / 2 && d * Math.sin(diff) < gap) return WHITE;
+    }
+    let i = 0; while (i < ends.length - 1 && a > ends[i][0]) i++;
+    return ends[i][1];
+  };
+  // Pixels away from any edge take one sample; edge pixels take 16 for smooth lines.
+  const nearEdge = (px, py) => {
+    const dx = px - c, dy = py - c, d = Math.sqrt(dx * dx + dy * dy);
+    if (Math.abs(d - r) < 1.5) return true;
+    if (d > r) return false;
+    let a = Math.atan2(dx, -dy); if (a < 0) a += 2 * Math.PI;
+    for (let k = 0; k < bounds.length; k++) {
+      let diff = Math.abs(a - bounds[k]); if (diff > Math.PI) diff = 2 * Math.PI - diff;
+      if (diff < Math.PI / 2 && Math.abs(d * Math.sin(diff) - gap) < 1.5) return true;
+    }
+    return false;
+  };
+  const SS = 4;
+  const raw = new Array(size * (size * 3 + 1)); // filtered scanlines for PNG: filter byte 0 + RGB
+  let o = 0;
+  for (let y = 0; y < size; y++) {
+    raw[o++] = 0;
+    for (let x = 0; x < size; x++) {
+      if (!nearEdge(x + 0.5, y + 0.5)) {
+        const col = colorAt(x + 0.5, y + 0.5);
+        raw[o++] = col[0]; raw[o++] = col[1]; raw[o++] = col[2];
+        continue;
+      }
+      let R = 0, G = 0, B = 0;
+      for (let sy = 0; sy < SS; sy++) for (let sx = 0; sx < SS; sx++) {
+        const col = colorAt(x + (sx + 0.5) / SS, y + (sy + 0.5) / SS);
+        R += col[0]; G += col[1]; B += col[2];
+      }
+      const n = SS * SS;
+      raw[o++] = Math.round(R / n); raw[o++] = Math.round(G / n); raw[o++] = Math.round(B / n);
+    }
+  }
+  return pngBytes(size, size, raw);
+}
+
+// Minimal PNG writer (8-bit RGB). Compression uses Apps Script's gzip,
+// re-wrapped as the zlib stream PNG expects.
+function pngBytes(w, h, raw) {
+  const u8 = (arr) => arr.map((b) => b & 255);
+  const gz = u8(Utilities.gzip(Utilities.newBlob(raw.map((b) => (b > 127 ? b - 256 : b)))).getBytes());
+  let p = 10; const flg = gz[3];
+  if (flg & 4) p += 2 + (gz[10] | (gz[11] << 8));
+  if (flg & 8) { while (gz[p] !== 0) p++; p++; }
+  if (flg & 16) { while (gz[p] !== 0) p++; p++; }
+  if (flg & 2) p += 2;
+  const deflate = gz.slice(p, gz.length - 8);
+  let a = 1, b = 0;
+  for (let i = 0; i < raw.length; i++) { a = (a + raw[i]) % 65521; b = (b + a) % 65521; }
+  const zlib = [0x78, 0x9c].concat(deflate, [(b >>> 8) & 255, b & 255, (a >>> 8) & 255, a & 255]);
+  const crcTable = [];
+  for (let n = 0; n < 256; n++) { let k = n; for (let j = 0; j < 8; j++) k = k & 1 ? 0xedb88320 ^ (k >>> 1) : k >>> 1; crcTable[n] = k >>> 0; }
+  const crc = (bytes) => { let x = 0xffffffff; for (let i = 0; i < bytes.length; i++) x = crcTable[(x ^ bytes[i]) & 255] ^ (x >>> 8); return (x ^ 0xffffffff) >>> 0; };
+  const u32 = (v) => [(v >>> 24) & 255, (v >>> 16) & 255, (v >>> 8) & 255, v & 255];
+  const chunk = (type, data) => {
+    const td = type.split("").map((ch) => ch.charCodeAt(0)).concat(data);
+    return u32(data.length).concat(td, u32(crc(td)));
+  };
+  const out = [137, 80, 78, 71, 13, 10, 26, 10]
+    .concat(chunk("IHDR", u32(w).concat(u32(h), [8, 2, 0, 0, 0])), chunk("IDAT", zlib), chunk("IEND", []));
+  return out.map((v) => (v > 127 ? v - 256 : v)); // Apps Script byte arrays are signed
 }
 
 // ------------------------------------------------------------------ helpers
