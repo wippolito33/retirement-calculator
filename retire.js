@@ -326,16 +326,19 @@ function submitToSheet(p, g) {
 // Year-by-year table, split in two: working years, then retirement years.
 // When printed, the first table starts page 2 and the retirement years start a new page.
 function balanceTables(e, t) {
-  const head = `<thead><tr><th>Age</th><th class="num">Beginning retirement balance</th><th class="num">Investment growth</th><th class="num">Contributions at ${e.percentToSave}% of income</th><th class="num">Annual income desired</th><th class="num">Retirement account withdrawals</th><th class="num">Ending retirement balance</th></tr></thead>`;
+  // Print-only rows: a spacer and the section title repeat at the top of every
+  // printed page (and a spacer at the bottom), so the margins don't depend on
+  // the browser's print-margin setting.
+  const head = (title) => `<thead><tr class="print-gap"><td colspan="7"></td></tr><tr class="print-title"><th colspan="7">${title}</th></tr><tr><th>Age</th><th class="num">Beginning retirement balance</th><th class="num">Investment growth</th><th class="num">Contributions at ${e.percentToSave}% of income</th><th class="num">Annual income desired</th><th class="num">Retirement account withdrawals</th><th class="num">Ending retirement balance</th></tr></thead><tfoot><tr class="print-gap"><td colspan="7"></td></tr></tfoot>`;
   const rowHTML = (r) => `<tr class="${r.age >= e.retirementAge ? "retire-year" : ""}">
           <td>${r.age}</td><td class="num">${money(r.beginningBalance)}</td><td class="num">${money(r.investmentGrowth)}</td><td class="num">${money(r.contributions)}</td>
           <td class="num">${money(r.annualIncomeDesired)}</td><td class="num">${money(r.withdrawals)}</td><td class="num">${money(r.endingBalance)}</td></tr>`;
-  const table = (rows) => `<div class="table-scroll"><table>${head}<tbody>${rows.map(rowHTML).join("")}</tbody></table></div>`;
+  const table = (rows, title) => `<div class="table-scroll"><table>${head(title)}<tbody>${rows.map(rowHTML).join("")}</tbody></table></div>`;
   const working = t.yearlyData.filter((r) => r.age < e.retirementAge);
   const retired = t.yearlyData.filter((r) => r.age >= e.retirementAge);
   const parts = [];
-  if (working.length) parts.push(`<section class="balances"><h4>Balances by year*: before retirement</h4>${table(working)}</section>`);
-  if (retired.length) parts.push(`<section class="balances"><h4>Balances by year*: retirement, from age ${e.retirementAge}</h4>${table(retired)}</section>`);
+  if (working.length) parts.push(`<section class="balances"><h4>Balances by year*: before retirement</h4>${table(working, "Balances by year*: before retirement")}</section>`);
+  if (retired.length) parts.push(`<section class="balances"><h4>Balances by year*: retirement, from age ${e.retirementAge}</h4>${table(retired, `Balances by year*: retirement, from age ${e.retirementAge}`)}</section>`);
   return parts.join("");
 }
 

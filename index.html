@@ -183,14 +183,22 @@
   @media (max-width: 560px) { .group, .report-grid, .stats { grid-template-columns: minmax(0, 1fr); } .rp-pie { grid-template-columns: minmax(0, 1fr); } }
   /* Printed report: page 1 holds everything through the result summary,
      the working-years table starts page 2, and the retirement years start a new page. */
-  @page { size: letter; margin: 0.6in 0; }
+  @page { size: letter; margin: 0; }
+  .print-gap, .print-title { display: none; }
   @media print {
     header.top, nav.pages, .intro, .banner, .calc, .rp-chart, .report-toggle, footer { display: none !important; }
     html, body { background: #fff; }
     * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     .wrap { max-width: none; padding: 0; }
-    /* Side margins come from padding, so they hold even if the print dialog is set to no margins. */
-    .report { border: 0; border-radius: 0; padding: 0 0.75in; margin: 0; font-size: 10.5pt; }
+    /* All margins are built into the page (padding and repeating spacer rows),
+       so they hold whatever the print dialog's Margins setting is. */
+    .report { border: 0; border-radius: 0; padding: 0.6in 0.75in 0.5in; margin: 0; font-size: 10.5pt; }
+    .balances > h4 { display: none; }
+    tr.print-gap { display: table-row; }
+    thead tr.print-gap td { height: 0.6in; padding: 0 !important; border: 0; }
+    tfoot tr.print-gap td { height: 0.5in; padding: 0 !important; border: 0; }
+    tr.print-title { display: table-row; }
+    tr.print-title th { font: 600 10.5pt var(--sans); color: var(--ink); text-align: left; padding: 0 0 4px !important; border: 0; }
     .letterhead { padding-bottom: 8px; margin-bottom: 8px; }
     .letterhead .co { font-size: 18pt; }
     .letterhead .by, .letterhead .right { font-size: 9pt; line-height: 1.35; margin-top: 4px; }
