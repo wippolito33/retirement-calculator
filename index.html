@@ -213,10 +213,14 @@
     table.info { font-size: 9.5pt; }
     table.info td { padding: 2.5px 0; }
     table.info td:first-child { width: 48%; }
-    .rp-pie { grid-template-columns: 110px minmax(0, 1fr); gap: 12px; margin: 8px 0 0 !important; }
-    .rp-pie .pie-box { height: 110px; }
+    /* Pie beside a two-line legend (label, then amount) so nothing is squeezed. */
+    .rp-pie { grid-template-columns: 125px minmax(0, 1fr); gap: 20px; margin: 10px 0 0 !important; align-items: center; }
+    .rp-pie .pie-box { height: 125px; width: 125px; }
     .rp-legend { font-size: 9pt; }
-    .rp-legend li { padding: 2px 0; }
+    .rp-legend li { display: grid; grid-template-columns: 10px minmax(0, 1fr); column-gap: 7px; padding: 1.5px 0; line-height: 1.2; }
+    .rp-legend .sw { width: 10px; height: 10px; border-radius: 2px; grid-row: 1 / span 2; align-self: start; margin-top: 2px; }
+    .rp-legend .v { grid-column: 2; margin-left: 0; font-weight: 600; color: var(--ink); }
+    .report a, .letterhead a { text-decoration: none; }
     .balances { break-before: page; }
     .balances h4 { margin-top: 0; }
     .report .table-scroll { overflow: visible; border: 0; border-radius: 0; }
